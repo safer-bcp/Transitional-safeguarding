@@ -27,7 +27,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 Arial,Helvetica,sans-serif}
 a{color:var(--link)}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:2px}
-.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.wrap{max-width:1440px;margin:0 auto;padding:0 clamp(16px,3vw,40px)}
 
 /* top bar with logo (primary full-colour on white; mono white in dark theme) */
 .topbar{background:var(--topbar);border-bottom:1px solid var(--line)}
@@ -66,6 +66,13 @@ nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
 nav.tabs button{flex:0 0 auto;background:none;border:0;border-bottom:4px solid transparent;color:var(--muted);font:inherit;font-size:.92rem;font-weight:700;padding:13px 10px 10px;cursor:pointer;white-space:nowrap}
 nav.tabs button:hover{color:var(--text)}
 nav.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--c,var(--sb-dark-purple))}
+nav.tabs .tabsel{display:none}
+.tabsel label{font-size:.82rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.tabsel select{width:100%;font:inherit;font-weight:700;font-size:1rem;color:var(--text);background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c,var(--sb-dark-purple));border-radius:var(--radius);padding:10px 12px;min-height:44px}
+@media (max-width:700px){
+  nav.tabs .tabbtns{display:none}
+  nav.tabs .tabsel{display:flex;align-items:center;gap:10px;padding-top:8px;padding-bottom:8px}
+}
 [data-c="pink"]{--c:var(--sb-pink);--ct:var(--t-pink);--cs:var(--s-pink)}
 [data-c="blue"]{--c:var(--sb-blue);--ct:var(--t-blue);--cs:var(--s-blue)}
 [data-c="purple"]{--c:var(--sb-light-purple);--ct:var(--t-purple);--cs:var(--s-purple)}
@@ -78,10 +85,12 @@ section.panel.active{display:block}
 h2{font-size:1.6rem;font-weight:400;margin:0 0 10px;color:var(--ct,var(--heading));display:flex;align-items:center;gap:12px;line-height:1.2}
 h2:before{content:"";flex:0 0 16px;height:16px;background:var(--c,var(--sb-dark-purple))}
 h3{font-size:1.08rem;margin:24px 0 8px;color:var(--heading)}
-p.lead{color:var(--muted);margin-top:0;max-width:760px}
+p.lead{color:var(--muted);margin-top:0;max-width:900px}
 .grid{display:grid;gap:14px}
-.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g2,.g3{grid-template-columns:1fr}
+@media (min-width:700px){.g2,.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1000px){.g3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:1200px){.g2{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .card{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--c,var(--line));border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
 .card h4{margin:0 0 6px;font-size:1rem;color:var(--heading)}
 .card p{margin:0 0 6px}
@@ -174,7 +183,7 @@ footer p{margin:0 0 8px;max-width:700px}
 @media (max-width:640px){footer .fwrap{grid-template-columns:1fr}}
 .sr{position:absolute;left:-9999px}
 @media print{
-  nav.tabs,.btnrow,.filters,input[type="search"],.hero .motif{display:none!important}
+  nav.tabs,.tabsel,.btnrow,.filters,input[type="search"],.hero .motif{display:none!important}
   section.panel{display:block!important;page-break-before:always}
   section.panel:first-of-type{page-break-before:auto}
   body{background:#fff;color:#000}
@@ -202,7 +211,8 @@ footer p{margin:0 0 8px;max-width:700px}
 <div class="blocks bar" aria-hidden="true"><div class="wrap"><i></i><i></i><i></i><i></i><i></i></div></div>
 
 <nav class="tabs" aria-label="Toolkit sections">
-  <div class="wrap" role="tablist">
+  <div class="wrap tabsel"><label for="tabSelect">Go to section</label><select id="tabSelect"></select></div>
+  <div class="wrap tabbtns" role="tablist">
     <button role="tab" aria-selected="true" data-tab="start" data-c="pink">Start here</button>
     <button role="tab" aria-selected="false" data-tab="check" data-c="blue">Needs &amp; risk check</button>
     <button role="tab" aria-selected="false" data-tab="pathway" data-c="orange">Transition pathway</button>
@@ -452,12 +462,17 @@ footer p{margin:0 0 8px;max-width:700px}
 "use strict";
 /* ---------- tabs ---------- */
 const tabs=[...document.querySelectorAll('nav.tabs button')];
+const tabSel=document.getElementById('tabSelect');
+tabSel.innerHTML=tabs.map(b=>`<option value="${b.dataset.tab}">${b.textContent}</option>`).join('');
+tabSel.addEventListener('change',()=>show(tabSel.value));
 function show(id){
   tabs.forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===id)));
+  tabSel.value=id; const cur=tabs.find(b=>b.dataset.tab===id); if(cur){tabSel.parentElement.dataset.c=cur.dataset.c;}
   document.querySelectorAll('section.panel').forEach(s=>s.classList.toggle('active', s.id===id));
   window.scrollTo({top:0});
 }
 tabs.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+tabSel.parentElement.dataset.c=tabs[0].dataset.c;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- data: services ---------- */
